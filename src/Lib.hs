@@ -72,8 +72,8 @@ simulation (Nothing, generator) = return ()
 simulation (Just grid, generator) = fst (simulator (Just grid, generator))
 
 runSimulation :: IO ()
-runSimulation = let width = 50
-                    height = 50
+runSimulation = let width = 20
+                    height = 20
                     initialGrid = initGrid width height
                     generator = mkStdGen 126590563
                     (initialCount, newGenerator) = randomR (10 :: Int, floor ((fromIntegral (width * height)) * 0.1)) generator
