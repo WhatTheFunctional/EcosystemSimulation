@@ -36,13 +36,14 @@ populateGrid [] (Just grid) = Just grid
 populateGrid ((creature, i, j) : creatures) (Just grid) = populateGrid creatures (gridInsert creature i j grid)
 populateGrid _ Nothing = Nothing
 
-generatePopulation :: (RandomGen g) => ([(Int, Int)], g) -> Maybe ((Creature, Int, Int), ([(Int, Int)], g))
+generatePopulation :: RandomGen g => ([(Int, Int)], g) -> Maybe ((Creature, Int, Int), ([(Int, Int)], g))
 generatePopulation ([], generator) = Nothing
 generatePopulation (((i, j) : coords), generator)
     | creatureIndex == 0 = Just ((Rabbit, i, j), (coords, generator1))
     | creatureIndex == 1 = Just ((Fox, i, j), (coords, generator1))
     | creatureIndex == 2 = Just ((Wolf, i, j), (coords, generator1))
       where (creatureIndex, generator1) = randomR (0 :: Int, 2 :: Int) generator
+
 
 data WorldState g = WorldState {iteration :: Int,
                                 io :: IO (),
@@ -52,12 +53,38 @@ data WorldState g = WorldState {iteration :: Int,
 performIO :: RandomGen g => WorldState g -> IO ()
 performIO (WorldState {io = thisIO}) = thisIO
 
+wander :: RandomGen g => Int -> Int -> WorldState g -> WorldState g
+wander i j worldState@(WorldState {iteration = thisIteration,
+                                   io = thisIO,
+                                   generator = thisGenerator,
+                                   grid = thisGrid})
+    = case thisGrid of
+      Nothing -> worldState
+      Just aGrid -> if newI >= 1 && newI < nrows aGrid &&
+                       newJ >= 1 && newJ < ncols aGrid
+                    then if unsafeGet newI newJ aGrid == Empty
+                         then let newGrid = unsafeSet Empty (i, j) (unsafeSet (unsafeGet i j aGrid) (newI, newJ) aGrid)
+                              in (WorldState {iteration = thisIteration,
+                                              io = thisIO,
+                                              generator = newGenerator,
+                                              grid = Just newGrid})
+                         else (WorldState {iteration = thisIteration,
+                                           io = thisIO,
+                                           generator = newGenerator,
+                                           grid = thisGrid})
+                    else (WorldState {iteration = thisIteration,
+                                      io = thisIO,
+                                      generator = newGenerator,
+                                      grid = thisGrid})
+      where (randomNumber, newGenerator) = randomR (0 :: Int, 3 ::Int) thisGenerator
+            newI = if randomNumber == 0 then i - 1 else (if randomNumber == 1 then i + 1 else i)
+            newJ = if randomNumber == 2 then j - 1 else (if randomNumber == 3 then j + 1 else j)
+
 simulateStep :: RandomGen g => State (WorldState g) (WorldState g)
 simulateStep = state (\(WorldState {iteration = thisIteration,
                                     io = thisIO, 
                                     generator = thisGenerator,
                                     grid = thisGrid}) -> 
-       
        let simulateIO = thisIO >> return ()
            newWorldState = WorldState {iteration = thisIteration,
                                        io = simulateIO,
