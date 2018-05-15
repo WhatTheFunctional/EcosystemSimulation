@@ -17,22 +17,12 @@ instance Show Creature where
     show Fox = "F"
     show Wolf = "W"
 
-wander :: (RandomGen g) => Int -> Int -> (Maybe (Matrix Creature), g) -> (Maybe (Matrix Creature), g)
-wander i j (Nothing, generator) = (Nothing, generator)
-wander i j (Just grid, generator)
-    | direction == 0 = if (i - 1) > 1 && getElem (i - 1) j grid == Empty
-                       then (safeSet (getElem i j grid) (i - 1, j) grid >>= safeSet Empty (i, j), generator1)
-                       else (Just grid, generator1)
-    | direction == 1 = if (i + 1) < (nrows grid) && getElem (i + 1) j grid == Empty
-                       then (safeSet (getElem i j grid) (i + 1, j) grid >>= safeSet Empty (i, j), generator1)
-                       else (Just grid, generator1)
-    | direction == 2 = if (j - 1) > 1 && getElem i (j - 1) grid == Empty
-                       then (safeSet (getElem i j grid) (i, j - 1) grid >>= safeSet Empty (i, j), generator1)
-                       else (Just grid, generator1)
-    | direction == 3 = if (j + 1) < (ncols grid) && getElem i (j + 1) grid == Empty
-                       then (safeSet (getElem i j grid) (i, j + 1) grid >>= safeSet Empty (i, j), generator1)
-                       else (Just grid, generator1)
-    where (direction, generator1) = randomR (0 :: Int, 3 :: Int) generator
+data WorldState = WorldState {iteration :: Int,
+                              io :: IO (),
+                              grid :: Maybe (Matrix Creature)}
+
+performIO :: WorldState -> IO ()
+performIO (WorldState {io = thisIO}) = thisIO
 
 initGrid :: Int -> Int -> Matrix Creature
 initGrid sizeI sizeJ = matrix sizeI sizeJ (\(i, j) -> Empty)
@@ -58,18 +48,55 @@ generatePopulation (((i, j) : coords), generator)
     | creatureIndex == 2 = Just ((Wolf, i, j), (coords, generator1))
       where (creatureIndex, generator1) = randomR (0 :: Int, 2 :: Int) generator
 
-simulator :: (RandomGen g) => (Maybe (Matrix Creature), g) -> (IO (), (Maybe (Matrix Creature), g))
-simulator (Nothing, generator) = (return (), (Nothing, generator))
-simulator (Just grid, generator)
-    = (printGrid (Just grid) >>
-       hFlush stdout >>
-       getChar >>
-       return (),
-       (Just grid, generator))
 
-simulation :: (RandomGen g) => (Maybe (Matrix Creature), g) -> IO ()
-simulation (Nothing, generator) = return ()
-simulation (Just grid, generator) = fst (simulator (Just grid, generator))
+simulateStep :: State WorldState WorldState
+simulateStep = state (\(WorldState {iteration = thisIteration,
+                                    io = thisIO, 
+                                    grid = thisGrid}) -> 
+       
+       let simulateIO = thisIO >> return ()
+           newWorldState = WorldState {iteration = thisIteration,
+                                       io = simulateIO,
+                                       grid = thisGrid}
+       in (newWorldState, newWorldState))
+
+printStep :: State WorldState WorldState
+printStep = state (\(WorldState {iteration = thisIteration,
+                                 io = thisIO, 
+                                 grid = thisGrid}) -> 
+       let printIO = thisIO >> printGrid thisGrid
+           newWorldState = WorldState {iteration = thisIteration,
+                                       io = printIO,
+                                       grid = thisGrid}
+       in (newWorldState, newWorldState))
+
+waitStep :: State WorldState WorldState
+waitStep = state (\(WorldState {iteration = thisIteration,
+                               io = thisIO, 
+                               grid = thisGrid}) -> 
+       let waitIO = thisIO >> hFlush stdout >> getChar >> return ()
+           newWorldState = WorldState {iteration = thisIteration,
+                                       io = waitIO,
+                                       grid = thisGrid}
+       in (newWorldState, newWorldState))
+
+incrementStep :: State WorldState WorldState
+incrementStep = state (\(WorldState {iteration = thisIteration,
+                                     io = thisIO, 
+                                     grid = thisGrid}) -> 
+       let newWorldState = WorldState {iteration = thisIteration + 1,
+                                       io = thisIO,
+                                       grid = thisGrid}
+       in (newWorldState, newWorldState))
+
+simulate :: State WorldState WorldState
+simulate = simulateStep >>
+           printStep >>
+           waitStep >>
+           incrementStep >>= (\worldState@(WorldState {iteration = thisIteration, io = thisIO}) ->
+           if thisIteration > 10
+           then get
+           else simulate)
 
 runSimulation :: IO ()
 runSimulation = let width = 20
@@ -79,5 +106,6 @@ runSimulation = let width = 20
                     (initialCount, newGenerator) = randomR (10 :: Int, floor ((fromIntegral (width * height)) * 0.1)) generator
                     initialCoordinates = take initialCount (shuffle' ((,) <$> [1..width] <*> [1..height]) (width * height) newGenerator)
                     initialPopulation = unfoldr generatePopulation (initialCoordinates, newGenerator)
+                    iGrid = populateGrid initialPopulation (Just initialGrid)
                 in putStrLn ("Population simulation with " ++ (show initialCount) ++ " creatures.\n") >>
-                   printGrid (populateGrid initialPopulation (Just initialGrid))
+                   performIO (evalState simulate (WorldState {iteration = 0, io = return (), grid = iGrid}))
