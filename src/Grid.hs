@@ -19,12 +19,11 @@ gridInsert creature i j grid = safeSet creature (i, j) grid
 gridRemove :: Int -> Int -> Matrix Creature -> Maybe (Matrix Creature)
 gridRemove i j grid = safeSet Empty (i, j) grid
 
-printGrid :: Maybe (Matrix Creature) -> IO ()
-printGrid Nothing = return ()
-printGrid (Just grid) = putStrLn $ prettyMatrix grid
+populateGrid :: [(Creature, Int, Int)] -> Matrix Creature -> Maybe (Matrix Creature)
+populateGrid [] grid = Just grid
+populateGrid ((creature, i, j) : creatures) grid = gridInsert creature i j grid >>=
+                                                   populateGrid creatures
 
-populateGrid :: [(Creature, Int, Int)] -> Maybe (Matrix Creature) -> Maybe (Matrix Creature)
-populateGrid [] Nothing = Nothing
-populateGrid [] (Just grid) = Just grid
-populateGrid ((creature, i, j) : creatures) (Just grid) = populateGrid creatures (gridInsert creature i j grid)
-populateGrid _ Nothing = Nothing
+printGrid :: Matrix Creature -> IO ()
+printGrid grid = putStrLn $ prettyMatrix grid
+
