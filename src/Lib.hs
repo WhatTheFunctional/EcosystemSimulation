@@ -1,3 +1,6 @@
+--FSM Simulation
+--Copyright Laurence Emms 2018
+
 module Lib
     ( runSimulation
     ) where
