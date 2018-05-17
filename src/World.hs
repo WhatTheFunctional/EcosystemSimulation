@@ -87,11 +87,11 @@ searchFor :: (WorldState g -> Creature -> (Int, Int) -> Bool) -> WorldState g ->
 searchFor searchFunction worldState range creature (i, j) 
     = filter (searchFunction worldState creature) ((,) <$> [(i - range) .. (i + range)] <*> [(j - range) .. (j + range)])
 
-moveCreature :: RandomGen g => WorldState g -> (Int, Int) -> (Int, Int) -> Creature -> WorldState g
-moveCreature worldState@(WorldState {iteration = thisIteration,
-                                     io = thisIO,
-                                     generator = thisGenerator,
-                                     grid = thisGrid}) (i, j) (newI, newJ) creature
+moveCreature :: RandomGen g => (Int, Int) -> (Int, Int) -> Creature -> WorldState g -> WorldState g
+moveCreature (i, j) (newI, newJ) creature worldState@(WorldState {iteration = thisIteration,
+                                                                  io = thisIO,
+                                                                  generator = thisGenerator,
+                                                                  grid = thisGrid})
     | coordinatesAreInGrid (newI, newJ) thisGrid &&
       targetCreature == Empty
         = let newGrid = unsafeSet Empty (i, j) (unsafeSet (setLifetime (thisIteration + 1) creature) (newI, newJ) thisGrid)
@@ -107,7 +107,7 @@ wander worldState@(WorldState {iteration = thisIteration,
                                io = thisIO,
                                generator = thisGenerator,
                                grid = thisGrid}) creature (i, j)
-    = moveCreature newWorldState (i, j) (newI, newJ) creature
+    = moveCreature (i, j) (newI, newJ) (incrementHunger creature) newWorldState
         where (randomNumber, newGenerator) = randomR (0 :: Int, 3 ::Int) thisGenerator
               (newI, newJ) = neighborCoordinates randomNumber (i, j)
               newWorldState = WorldState {iteration = thisIteration,
@@ -120,7 +120,7 @@ graze worldState@(WorldState {iteration = thisIteration,
                               io = thisIO,
                               generator = thisGenerator,
                               grid = thisGrid}) creature (i, j)
-    = moveCreature newWorldState (i, j) (newI, newJ) creature
+    = moveCreature (i, j) (newI, newJ) (decrementHunger creature) newWorldState
         where (randomNumber, newGenerator) = randomR (0 :: Int, 3 ::Int) thisGenerator
               (newI, newJ) = neighborCoordinates randomNumber (i, j)
               newWorldState = WorldState {iteration = thisIteration,
@@ -133,10 +133,10 @@ hunt worldState@(WorldState {iteration = thisIteration,
                              io = thisIO,
                              generator = thisGenerator,
                              grid = thisGrid}) creature (i, j)
-    | fst (prey !! randomNumber) < i = moveCreature newWorldState (i, j) (i - 1, j) creature
-    | fst (prey !! randomNumber) > i = moveCreature newWorldState (i, j) (i + 1, j) creature
-    | snd (prey !! randomNumber) < j = moveCreature newWorldState (i, j) (i, j - 1) creature
-    | snd (prey !! randomNumber) > j = moveCreature newWorldState (i, j) (i, j + 1) creature
+    | fst (prey !! randomNumber) < i = moveCreature (i, j) (i - 1, j) (incrementHunger creature) newWorldState 
+    | fst (prey !! randomNumber) > i = moveCreature (i, j) (i + 1, j) (incrementHunger creature) newWorldState
+    | snd (prey !! randomNumber) < j = moveCreature (i, j) (i, j - 1) (incrementHunger creature) newWorldState
+    | snd (prey !! randomNumber) > j = moveCreature (i, j) (i, j + 1) (incrementHunger creature) newWorldState
     | otherwise = newWorldState
         where prey = searchFor preySearch newWorldState (getSearchDistance creature) creature (i, j)
               (randomNumber, newGenerator) = randomR (0 :: Int, ((length prey) - 1) ::Int) thisGenerator
@@ -150,10 +150,10 @@ flee worldState@(WorldState {iteration = thisIteration,
                              io = thisIO,
                              generator = thisGenerator,
                              grid = thisGrid}) creature (i, j)
-    | fst (predators !! randomNumber) < i = moveCreature newWorldState (i, j) (i + 1, j) creature
-    | fst (predators !! randomNumber) > i = moveCreature newWorldState (i, j) (i - 1, j) creature
-    | snd (predators !! randomNumber) < j = moveCreature newWorldState (i, j) (i, j + 1) creature
-    | snd (predators !! randomNumber) > j = moveCreature newWorldState (i, j) (i, j - 1) creature
+    | fst (predators !! randomNumber) < i = moveCreature (i, j) (i + 1, j) (incrementHunger creature) newWorldState
+    | fst (predators !! randomNumber) > i = moveCreature (i, j) (i - 1, j) (incrementHunger creature) newWorldState
+    | snd (predators !! randomNumber) < j = moveCreature (i, j) (i, j + 1) (incrementHunger creature) newWorldState
+    | snd (predators !! randomNumber) > j = moveCreature (i, j) (i, j - 1) (incrementHunger creature) newWorldState
     | otherwise = newWorldState
         where predators = searchFor predatorSearch newWorldState (getSearchDistance creature) creature (i, j)
               (randomNumber, newGenerator) = randomR (0 :: Int, ((length predators) - 1) ::Int) thisGenerator

@@ -6,6 +6,10 @@ module Creatures (CreatureState(..),
                   getSearchDistance,
                   getLifetime,
                   setLifetime,
+                  getHunger,
+                  setHunger,
+                  incrementHunger,
+                  decrementHunger,
                   generatePopulation) where
 
 import System.Random
@@ -52,6 +56,18 @@ setHunger h Empty = Empty
 setHunger h (Rabbit l x s) = Rabbit l h s
 setHunger h (Fox l x s) = Fox l h s
 setHunger h (Wolf l x s) = Wolf l h s
+
+incrementHunger :: Creature -> Creature
+incrementHunger Empty = Empty
+incrementHunger (Rabbit l h s) = Rabbit l (h + 1) s
+incrementHunger (Fox l h s) = Fox l (h + 1) s
+incrementHunger (Wolf l h s) = Wolf l (h + 1) s
+
+decrementHunger :: Creature -> Creature
+decrementHunger Empty = Empty
+decrementHunger (Rabbit l h s) = Rabbit l (h + 1) s
+decrementHunger (Fox l h s) = Fox l (h + 1) s
+decrementHunger (Wolf l h s) = Wolf l (h + 1) s
 
 generatePopulation :: RandomGen g => ([(Int, Int)], g) -> Maybe ((Creature, Int, Int), ([(Int, Int)], g))
 generatePopulation ([], generator) = Nothing
