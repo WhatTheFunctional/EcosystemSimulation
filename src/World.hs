@@ -42,36 +42,97 @@ coordinatesAreInGrid (i, j) grid
     = i >= 1 && i <= nrows grid &&
       j >= 1 && j <= ncols grid
 
+moveCreature :: RandomGen g => WorldState g -> (Int, Int) -> (Int, Int) -> Creature -> WorldState g
+moveCreature worldState@(WorldState {iteration = thisIteration,
+                                     io = thisIO,
+                                     generator = thisGenerator,
+                                     grid = thisGrid}) (i, j) (newI, newJ) creature
+    | coordinatesAreInGrid (newI, newJ) thisGrid &&
+      targetCreature == Empty
+        = let newGrid = unsafeSet Empty (i, j) (unsafeSet (setLifetime (thisIteration + 1) creature) (newI, newJ) thisGrid)
+          in (WorldState {iteration = thisIteration,
+                          io = thisIO,
+                          generator = thisGenerator,
+                          grid = newGrid})
+    | otherwise = worldState
+        where targetCreature = unsafeGet newI newJ thisGrid
+
+wander :: RandomGen g => WorldState g -> Creature -> (Int, Int) -> WorldState g
+wander worldState@(WorldState {iteration = thisIteration,
+                               io = thisIO,
+                               generator = thisGenerator,
+                               grid = thisGrid}) creature (i, j)
+    = moveCreature newWorldState (i, j) (newI, newJ) creature
+        where (randomNumber, newGenerator) = randomR (0 :: Int, 3 ::Int) thisGenerator
+              (newI, newJ) = neighborCoordinates randomNumber (i, j)
+              newWorldState = WorldState {iteration = thisIteration,
+                                          io = thisIO,
+                                          generator = newGenerator,
+                                          grid = thisGrid}
+
+predatorSearch :: WorldState g -> Creature -> (Int, Int) -> Bool
+predatorSearch (WorldState {grid = thisGrid}) Empty (i, j) = False
+predatorSearch (WorldState {grid = thisGrid}) (Rabbit _) (i, j)
+    = case safeGet i j thisGrid of
+      Nothing -> False
+      Just (Fox _) -> True
+      Just (Wolf _) -> True
+      _ -> False
+predatorSearch (WorldState {grid = thisGrid}) (Fox _) (i, j)
+    = case safeGet i j thisGrid of
+      Nothing -> False
+      Just (Wolf _) -> True
+      _ -> False
+predatorSearch (WorldState {grid = thisGrid}) (Wolf _) (i, j) = False
+
+preySearch :: WorldState g -> Creature -> (Int, Int) -> Bool
+preySearch (WorldState {grid = thisGrid}) Empty (i, j) = False
+preySearch (WorldState {grid = thisGrid}) (Rabbit _) (i, j) = False
+preySearch (WorldState {grid = thisGrid}) (Fox _) (i, j)
+    = case safeGet i j thisGrid of
+      Nothing -> False
+      Just (Rabbit _) -> True
+      _ -> False
+preySearch (WorldState {grid = thisGrid}) (Wolf _) (i, j)
+    = case safeGet i j thisGrid of
+      Nothing -> False
+      Just (Rabbit _) -> True
+      Just (Fox _) -> True
+      _ -> False
+
+searchFor :: (WorldState g -> Creature -> (Int, Int) -> Bool) -> WorldState g -> Int -> Creature -> (Int, Int) -> [(Int, Int)]
+searchFor searchFunction worldState range creature (i, j) 
+    = filter (searchFunction worldState creature) ((,) <$> [(i - range) .. (i + range)] <*> [(j - range) .. (j + range)])
+
+hunt :: RandomGen g => WorldState g -> Creature -> (Int, Int) -> WorldState g
+hunt worldState@(WorldState {iteration = thisIteration,
+                             io = thisIO,
+                             generator = thisGenerator,
+                             grid = thisGrid}) creature (i, j)
+    | fst (prey !! randomNumber) < i = moveCreature newWorldState (i, j) (i - 1, j) creature
+    | fst (prey !! randomNumber) > i = moveCreature newWorldState (i, j) (i + 1, j) creature
+    | snd (prey !! randomNumber) < j = moveCreature newWorldState (i, j) (i, j - 1) creature
+    | snd (prey !! randomNumber) > j = moveCreature newWorldState (i, j) (i, j + 1) creature
+    | otherwise = newWorldState
+        where prey = searchFor preySearch newWorldState (getSearchDistance creature) creature (i, j)
+              (randomNumber, newGenerator) = randomR (0 :: Int, ((length prey) - 1) ::Int) thisGenerator
+              newWorldState = WorldState {iteration = thisIteration,
+                                          io = thisIO,
+                                          generator = newGenerator,
+                                          grid = thisGrid}
+
 updateCreature :: RandomGen g => WorldState g -> (Int, Int) -> WorldState g
 updateCreature worldState@(WorldState {iteration = thisIteration,
                                        io = thisIO,
                                        generator = thisGenerator,
                                        grid = thisGrid}) (i, j)
-    = let (randomNumber, newGenerator) = randomR (0 :: Int, 3 ::Int) thisGenerator
-          (newI, newJ) = neighborCoordinates randomNumber (i, j)
-          creature = unsafeGet i j thisGrid
-          creatureLifetime = getLifetime creature
-          newWorldState = WorldState {iteration = thisIteration,
-                                      io = thisIO,
-                                      generator = newGenerator,
-                                      grid = thisGrid}
-      in if creature /= Empty &&
-            creatureLifetime <= thisIteration &&
-            coordinatesAreInGrid (i, j) thisGrid &&
-            coordinatesAreInGrid (newI, newJ) thisGrid
-         then let targetCreature = unsafeGet newI newJ thisGrid
-                  newIO = thisIO >>
-                          putStr (show creature) >> putStr " (" >> putStr (show creatureLifetime) >> putStr "): " >>
-                          putStr (show i) >> putStr ", " >> putStr (show j) >> putStr " -> " >>
-                          putStr (show newI) >> putStr ", " >> putStrLn (show newJ)
-              in if targetCreature == Empty
-                 then let newGrid = unsafeSet Empty (i, j) (unsafeSet (setLifetime (thisIteration + 1) creature) (newI, newJ) thisGrid)
-                      in (WorldState {iteration = thisIteration,
-                                      io = newIO,
-                                      generator = newGenerator,
-                                      grid = newGrid})
-                 else newWorldState
-         else newWorldState
+    | coordinatesAreInGrid (i, j) thisGrid &&
+      creature /= Empty &&
+      creatureLifetime <= thisIteration
+          = wander worldState creature (i, j)
+    | otherwise = worldState
+        where creature = unsafeGet i j thisGrid
+              creatureLifetime = getLifetime creature
 
 updateWorld :: RandomGen g => WorldState g -> WorldState g
 updateWorld worldState@(WorldState {iteration = thisIteration,

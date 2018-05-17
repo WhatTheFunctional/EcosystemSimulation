@@ -2,7 +2,7 @@
 --Copyright Laurence Emms 2018
 
 module Creatures (Creature(..),
-                  isPreyOf,
+                  getSearchDistance,
                   getLifetime,
                   setLifetime,
                   generatePopulation) where
@@ -20,13 +20,11 @@ instance Show Creature where
     show (Fox _) = "F"
     show (Wolf _) = "W"
 
-isPreyOf :: Creature -> Creature -> Bool
-Empty `isPreyOf` _ = False
-_ `isPreyOf` Empty = False
-(Rabbit _) `isPreyOf` (Fox _) = True
-(Rabbit _) `isPreyOf` (Wolf _) = True
-(Fox _) `isPreyOf` (Wolf _) = True
-_ `isPreyOf` _ = False
+getSearchDistance :: Creature -> Int
+getSearchDistance Empty = 0
+getSearchDistance (Rabbit _) = 2
+getSearchDistance (Fox _) = 4
+getSearchDistance (Wolf _) = 3
 
 getLifetime :: Creature -> Int
 getLifetime Empty = 0
