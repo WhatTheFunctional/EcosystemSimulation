@@ -61,7 +61,7 @@ simulate = maybeStep simulateWorld >>
              case worldState of
              Nothing -> get
              Just (WorldState {iteration = thisIteration})
-                -> if thisIteration > 100
+                -> if thisIteration > 1000
                    then get
                    else simulate)
 
