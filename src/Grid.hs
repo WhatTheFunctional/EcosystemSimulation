@@ -5,7 +5,9 @@ module Grid (initGrid,
              gridInsert,
              gridRemove,
              printGrid,
-             populateGrid) where
+             populateGrid,
+             neighborCoordinates,
+             coordinatesAreInGrid) where
 
 import Creatures
 import Data.Matrix
@@ -27,3 +29,15 @@ populateGrid ((creature, i, j) : creatures) grid = gridInsert creature i j grid 
 printGrid :: Matrix Creature -> IO ()
 printGrid grid = putStrLn $ prettyMatrix grid
 
+neighborCoordinates :: Int -> (Int, Int) -> (Int, Int)
+neighborCoordinates x (i, j)
+    | x == 0 = (i - 1, j)
+    | x == 1 = (i + 1, j)
+    | x == 2 = (i, j - 1)
+    | x == 3 = (i, j + 1)
+    | otherwise = (i, j)
+
+coordinatesAreInGrid :: (Int, Int) -> Matrix Creature -> Bool
+coordinatesAreInGrid (i, j) grid
+    = i >= 1 && i <= nrows grid &&
+      j >= 1 && j <= ncols grid

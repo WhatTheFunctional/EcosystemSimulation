@@ -13,10 +13,10 @@ import System.Random.Shuffle
 import Creatures
 import Grid
 import World
+import Behaviors
 
 simulateWorld :: RandomGen g => WorldState g -> Maybe (WorldState g)
 simulateWorld worldState = Just (updateWorld worldState)
-
 
 printWorld :: RandomGen g => WorldState g -> Maybe (WorldState g)
 printWorld worldState@(WorldState {io = thisIO, grid = thisGrid})
