@@ -47,13 +47,13 @@ simulate = maybeStep simulateWorld >>
                    else simulate)
 
 runSimulation :: IO ()
-runSimulation = let width = 20
-                    height = 20
+runSimulation = let width = 30
+                    height = 30
                     initialGrid = initGrid width height
                     generator = mkStdGen 126590563
                     (initialCount, newGenerator) = randomR (10 :: Int, floor ((fromIntegral (width * height)) * 0.1)) generator
                     initialCoordinates = take initialCount (shuffle' ((,) <$> [1..width] <*> [1..height]) (width * height) newGenerator)
-                    initialPopulation = unfoldr (generatePopulation 50 20) (initialCoordinates, newGenerator)
+                    initialPopulation = unfoldr (generatePopulation 70 25) (initialCoordinates, newGenerator)
                     iGrid = populateGrid initialPopulation initialGrid
                 in putStrLn ("Population simulation with " ++ (show initialCount) ++ " creatures.\n") >>
                    performIO (evalState simulate (iGrid >>= makeWorld 0 (return ()) newGenerator))

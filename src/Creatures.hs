@@ -90,8 +90,8 @@ decrementHunger (Fox l h s a) = Fox l (h - 1) s a
 decrementHunger (Wolf l h s a) = Wolf l (h - 1) s a
 
 foodValue :: Creature -> Int
-foodValue (Rabbit _ _ _ _) = 10
-foodValue (Fox _ _ _ _) = 30
+foodValue (Rabbit _ _ _ _) = 15
+foodValue (Fox _ _ _ _) = 40
 
 getState :: Creature -> Maybe CreatureState
 getState Empty = Nothing

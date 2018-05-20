@@ -102,11 +102,12 @@ reproduce location@(Location creature i j worldState@(WorldState {generator = th
                                              else randomR (0 :: Int, ((length mates) - 1) ::Int) thisGenerator
 
 consume :: RandomGen g => Location g -> (Location g, Location g)
-consume location@(Location creature i j worldState@(WorldState {generator = thisGenerator}))
+consume location@(Location creature i j worldState@(WorldState {generator = thisGenerator,
+                                                                grid = thisGrid}))
     | null prey = (location, location)
     | gridDistance (i, j) (prey !! randomNumber) == 1
         = let (pi, pj) = (prey !! randomNumber)
-              newLocation = unsafeSetCreatureInLocation Empty pi pj location
+              newLocation = unsafeSetCreatureInLocation (setHunger ((getHunger creature) - (foodValue $ unsafeGet pi pj thisGrid)) creature) i j (unsafeSetCreatureInLocation Empty pi pj location)
           in (newLocation, newLocation)
     | otherwise = (location, location)
         where prey = searchFor preySearch (getSearchDistance creature) location
