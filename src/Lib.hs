@@ -53,7 +53,7 @@ runSimulation = let width = 20
                     generator = mkStdGen 126590563
                     (initialCount, newGenerator) = randomR (10 :: Int, floor ((fromIntegral (width * height)) * 0.1)) generator
                     initialCoordinates = take initialCount (shuffle' ((,) <$> [1..width] <*> [1..height]) (width * height) newGenerator)
-                    initialPopulation = unfoldr generatePopulation (initialCoordinates, newGenerator)
+                    initialPopulation = unfoldr (generatePopulation 50 20) (initialCoordinates, newGenerator)
                     iGrid = populateGrid initialPopulation initialGrid
                 in putStrLn ("Population simulation with " ++ (show initialCount) ++ " creatures.\n") >>
                    performIO (evalState simulate (iGrid >>= makeWorld 0 (return ()) newGenerator))

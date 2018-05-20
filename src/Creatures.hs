@@ -130,11 +130,11 @@ lifetimeDeath creature@(Wolf l _ _ _)
     | l > 135 = Empty
     | otherwise = creature
 
-generatePopulation :: RandomGen g => ([(Int, Int)], g) -> Maybe ((Creature, Int, Int), ([(Int, Int)], g))
-generatePopulation ([], generator) = Nothing
-generatePopulation (((i, j) : coords), generator)
-    | creatureIndex == 0 = Just ((Rabbit 0 0 Wander False, i, j), (coords, generator1))
-    | creatureIndex == 1 = Just ((Fox 0 0 Wander False, i, j), (coords, generator1))
-    | creatureIndex == 2 = Just ((Wolf 0 0 Wander False, i, j), (coords, generator1))
-        where (creatureIndex, generator1) = randomR (0 :: Int, 2 :: Int) generator
+generatePopulation :: RandomGen g => Int -> Int -> ([(Int, Int)], g) -> Maybe ((Creature, Int, Int), ([(Int, Int)], g))
+generatePopulation _ _ ([], generator) = Nothing
+generatePopulation rabbits foxes (((i, j) : coords), generator)
+    | creatureIndex < rabbits = Just ((Rabbit 0 0 Wander False, i, j), (coords, generator1))
+    | creatureIndex < rabbits + foxes = Just ((Fox 0 0 Wander False, i, j), (coords, generator1))
+    | otherwise = Just ((Wolf 0 0 Wander False, i, j), (coords, generator1))
+        where (creatureIndex, generator1) = randomR (0 :: Int, 100 :: Int) generator
 
