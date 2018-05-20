@@ -172,13 +172,12 @@ flee (Location creature i j worldState@(WorldState {iteration = thisIteration,
                                           grid = thisGrid}
               newCreature = setCreatureActed True creature
 
-chooseBehavior :: RandomGen g => Location g -> Creature
-chooseBehavior (Location Empty _ _ _) = Empty
-chooseBehavior location@(Location creature@(Rabbit l h Wander a) _ _ _)
-    | length predators > 0 = (Rabbit l h Flee a)
-    | otherwise = creature
+chooseBehavior :: RandomGen g => Location g -> (Location g, Location g)
+chooseBehavior location@(Location Empty _ _ _) = (location, location)
+chooseBehavior location@(Location creature@(Rabbit l h Wander a) i j worldState)
+    | length predators > 0 = let newLocation = Location (Rabbit l h Flee a) i j worldState in (newLocation, newLocation)
+    | otherwise = (location, location)
         where predators = searchFor predatorSearch (getSearchDistance creature) location
---TODO
 
 performBehavior :: RandomGen g => (Location g) -> (Location g, Location g)
 performBehavior location@(Location Empty _ _ _) = (location, location)
