@@ -11,10 +11,12 @@ module Creatures (CreatureState(..),
                   setHunger,
                   incrementHunger,
                   decrementHunger,
-                  hungerDeath,
-                  lifetimeDeath,
+                  getState,
+                  setState,
                   creatureHasActed,
                   setCreatureActed,
+                  hungerDeath,
+                  lifetimeDeath,
                   generatePopulation) where
 
 import System.Random
@@ -40,15 +42,15 @@ getSearchDistance (Wolf _ _ _ _) = 3
 
 getLifetime :: Creature -> Int
 getLifetime Empty = 0
-getLifetime (Rabbit x _ _ _) = x
-getLifetime (Fox x _ _ _) = x
-getLifetime (Wolf x _ _ _) = x
+getLifetime (Rabbit l _ _ _) = l
+getLifetime (Fox l _ _ _) = l
+getLifetime (Wolf l _ _ _) = l
 
 setLifetime :: Int -> Creature -> Creature
 setLifetime l Empty = Empty
-setLifetime l (Rabbit x h s a) = Rabbit l h s a
-setLifetime l (Fox x h s a) = Fox l h s a
-setLifetime l (Wolf x h s a) = Wolf l h s a
+setLifetime l (Rabbit _ h s a) = Rabbit l h s a
+setLifetime l (Fox _ h s a) = Fox l h s a
+setLifetime l (Wolf _ h s a) = Wolf l h s a
 
 incrementLifetime :: Creature -> Creature
 incrementLifetime Empty = Empty
@@ -58,15 +60,15 @@ incrementLifetime (Wolf l h s a) = Wolf (l + 1) h s a
 
 getHunger :: Creature -> Int
 getHunger Empty = 0
-getHunger (Rabbit _ x _ _) = x
-getHunger (Fox _ x _ _) = x
-getHunger (Wolf _ x _ _) = x
+getHunger (Rabbit _ h _ _) = h
+getHunger (Fox _ h _ _) = h
+getHunger (Wolf _ h _ _) = h
 
 setHunger :: Int -> Creature -> Creature
 setHunger h Empty = Empty
-setHunger h (Rabbit l x s a) = Rabbit l h s a
-setHunger h (Fox l x s a) = Fox l h s a
-setHunger h (Wolf l x s a) = Wolf l h s a
+setHunger h (Rabbit l _ s a) = Rabbit l h s a
+setHunger h (Fox l _ s a) = Fox l h s a
+setHunger h (Wolf l _ s a) = Wolf l h s a
 
 incrementHunger :: Creature -> Creature
 incrementHunger Empty = Empty
@@ -79,6 +81,30 @@ decrementHunger Empty = Empty
 decrementHunger (Rabbit l h s a) = Rabbit l (h + 1) s a
 decrementHunger (Fox l h s a) = Fox l (h + 1) s a
 decrementHunger (Wolf l h s a) = Wolf l (h + 1) s a
+
+getState :: Creature -> Maybe CreatureState
+getState Empty = Nothing
+getState (Rabbit _ _ s _) = Just s
+getState (Fox _ _ s _) = Just s
+getState (Wolf _ _ s _) = Just s
+
+setState :: CreatureState -> Creature -> Creature
+setState s Empty = Empty
+setState s (Rabbit l h _ a) = (Rabbit l h s a)
+setState s (Fox l h _ a) = (Fox l h s a)
+setState s (Wolf l h _ a) = (Wolf l h s a)
+
+creatureHasActed :: Creature -> Bool
+creatureHasActed Empty = False
+creatureHasActed (Rabbit _ _ _ a) = a
+creatureHasActed (Fox _ _ _ a) = a
+creatureHasActed (Wolf _ _ _ a) = a
+
+setCreatureActed :: Bool -> Creature -> Creature
+setCreatureActed _ Empty = Empty
+setCreatureActed a (Rabbit l h s _) = Rabbit l h s a
+setCreatureActed a (Fox l h s _) = Fox l h s a
+setCreatureActed a (Wolf l h s _) = Wolf l h s a
 
 hungerDeath :: Creature -> Creature
 hungerDeath Empty = Empty
@@ -103,18 +129,6 @@ lifetimeDeath creature@(Fox l _ _ _)
 lifetimeDeath creature@(Wolf l _ _ _)
     | l > 135 = Empty
     | otherwise = creature
-
-creatureHasActed :: Creature -> Bool
-creatureHasActed Empty = False
-creatureHasActed (Rabbit _ _ _ a) = a
-creatureHasActed (Fox _ _ _ a) = a
-creatureHasActed (Wolf _ _ _ a) = a
-
-setCreatureActed :: Bool -> Creature -> Creature
-setCreatureActed _ Empty = Empty
-setCreatureActed a (Rabbit l h s x) = Rabbit l h s a
-setCreatureActed a (Fox l h s x) = Fox l h s a
-setCreatureActed a (Wolf l h s x) = Wolf l h s a
 
 generatePopulation :: RandomGen g => ([(Int, Int)], g) -> Maybe ((Creature, Int, Int), ([(Int, Int)], g))
 generatePopulation ([], generator) = Nothing
