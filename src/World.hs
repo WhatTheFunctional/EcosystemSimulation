@@ -2,6 +2,15 @@
 --Copyright Laurence Emms 2018
 
 module World (WorldState(..),
+              setIteration,
+              getIteration,
+              incrementIteration,
+              setIO,
+              getIO,
+              setGenerator,
+              getGenerator,
+              setGrid,
+              getGrid,
               makeWorld,
               performIO,
               updateCreature,
@@ -31,6 +40,17 @@ setIteration newIteration (WorldState {iteration = _,
 
 getIteration :: RandomGen g => WorldState g -> Int
 getIteration (WorldState {iteration = thisIteration}) = thisIteration
+
+incrementIteration :: RandomGen g => WorldState g -> WorldState g
+incrementIteration (WorldState {iteration = thisIteration,
+                                       io = thisIO,
+                                       generator = thisGenerator,
+                                       grid = thisGrid})
+    = WorldState {iteration = thisIteration + 1,
+                  io = thisIO,
+                  generator = thisGenerator,
+                  grid = thisGrid}
+
 
 setIO :: RandomGen g => IO () -> WorldState g -> WorldState g
 setIO newIO (WorldState {iteration = thisIteration,

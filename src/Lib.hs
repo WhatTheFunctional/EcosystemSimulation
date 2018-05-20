@@ -19,34 +19,15 @@ simulateWorld worldState = Just (updateWorld worldState)
 
 
 printWorld :: RandomGen g => WorldState g -> Maybe (WorldState g)
-printWorld (WorldState {iteration = thisIteration,
-                        io = thisIO,
-                        generator = thisGenerator,
-                        grid = thisGrid})
-    = Just (WorldState {iteration = thisIteration,
-                        io = thisIO >> printGrid thisGrid,
-                        generator = thisGenerator,
-                        grid = thisGrid})
+printWorld worldState@(WorldState {io = thisIO, grid = thisGrid})
+    = Just (setIO (thisIO >> printGrid thisGrid) worldState)
 
 waitWorld :: RandomGen g => WorldState g -> Maybe (WorldState g)
-waitWorld (WorldState {iteration = thisIteration,
-                       io = thisIO, 
-                       generator = thisGenerator,
-                       grid = thisGrid})
-    = Just (WorldState {iteration = thisIteration,
-                        io = thisIO >> putStrLn "-----" >> hFlush stdout >> getChar >> return (),
-                        generator = thisGenerator,
-                        grid = thisGrid})
+waitWorld worldState@(WorldState {io = thisIO})
+    = Just (setIO (thisIO >> putStrLn "-----" >> hFlush stdout >> getChar >> return ()) worldState)
 
 incrementWorld :: RandomGen g => WorldState g -> Maybe (WorldState g)
-incrementWorld (WorldState {iteration = thisIteration,
-                            io = thisIO, 
-                            generator = thisGenerator,
-                            grid = thisGrid})
-    = Just (WorldState {iteration = thisIteration + 1,
-                        io = thisIO,
-                        generator = thisGenerator,
-                        grid = thisGrid})
+incrementWorld worldState = Just (incrementIteration worldState)
 
 maybeStep :: RandomGen g => (WorldState g -> (Maybe (WorldState g))) -> State (Maybe (WorldState g)) (Maybe (WorldState g))
 maybeStep updateFunction = state (\worldState -> let newWorldState = worldState >>= updateFunction --worldState has type Mabye (WorldState g)
