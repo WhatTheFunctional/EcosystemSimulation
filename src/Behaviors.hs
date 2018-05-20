@@ -70,6 +70,10 @@ unsafeSetCreature :: RandomGen g => Creature -> Int -> Int -> WorldState g -> Wo
 unsafeSetCreature creature i j worldState@(WorldState {grid = thisGrid})
     = setGrid (unsafeSet creature (i, j) thisGrid) worldState
 
+unsafeSetCreatureInLocation :: RandomGen g => Creature -> Int -> Int -> Location g -> Location g
+unsafeSetCreatureInLocation creature i j (Location _ _ _ worldState)
+    = Location creature i j (unsafeSetCreature creature i j worldState)
+
 wander :: RandomGen g => Location g -> (Location g, Location g)
 wander (Location creature i j worldState@(WorldState {generator = thisGenerator}))
     = moveCreature (newI, newJ) (Location newCreature i j newWorldState)
@@ -79,65 +83,54 @@ wander (Location creature i j worldState@(WorldState {generator = thisGenerator}
               newWorldState = unsafeSetCreature newCreature i j $ setGenerator newGenerator worldState
 
 graze :: RandomGen g => Location g -> (Location g, Location g)
-graze (Location creature i j worldState)
+graze location@(Location creature i j worldState)
     = (newLocation, newLocation)
         where newCreature = setCreatureActed True $ decrementHunger $ decrementHunger creature
-              newWorldState = unsafeSetCreature newCreature i j worldState
-              newLocation = Location newCreature i j newWorldState
+              newLocation = unsafeSetCreatureInLocation newCreature i j location
 
 hunt :: RandomGen g => Location g -> (Location g, Location g)
-hunt (Location creature i j worldState@(WorldState {generator = thisGenerator}))
+hunt location@(Location creature i j worldState@(WorldState {generator = thisGenerator}))
     | fst (prey !! randomNumber) < i = moveCreature (i - 1, j) (Location newCreature i j newWorldState)
     | fst (prey !! randomNumber) > i = moveCreature (i + 1, j) (Location newCreature i j newWorldState)
     | snd (prey !! randomNumber) < j = moveCreature (i, j - 1) (Location newCreature i j newWorldState)
     | snd (prey !! randomNumber) > j = moveCreature (i, j + 1) (Location newCreature i j newWorldState)
     | otherwise = let newLocation = Location newCreature i j newWorldState in (newLocation, newLocation)
-        where prey = searchFor preySearch (getSearchDistance creature) (Location creature i j newWorldState)
+        where prey = searchFor preySearch (getSearchDistance creature) location
               (randomNumber, newGenerator) = randomR (0 :: Int, ((length prey) - 1) ::Int) thisGenerator
               newCreature = setCreatureActed True creature
               newWorldState = unsafeSetCreature newCreature i j $ setGenerator newGenerator worldState
 
 flee :: RandomGen g => Location g -> (Location g, Location g)
-flee (Location creature i j worldState@(WorldState {generator = thisGenerator}))
+flee location@(Location creature i j worldState@(WorldState {generator = thisGenerator}))
     | fst (predators !! randomNumber) < i = moveCreature (i + 1, j) (Location newCreature i j newWorldState)
     | fst (predators !! randomNumber) > i = moveCreature (i - 1, j) (Location newCreature i j newWorldState)
     | snd (predators !! randomNumber) < j = moveCreature (i, j + 1) (Location newCreature i j newWorldState)
     | snd (predators !! randomNumber) > j = moveCreature (i, j - 1) (Location newCreature i j newWorldState)
     | otherwise = let newLocation = Location newCreature i j newWorldState in (newLocation, newLocation)
-        where predators = searchFor predatorSearch (getSearchDistance creature) (Location creature i j newWorldState)
+        where predators = searchFor predatorSearch (getSearchDistance creature) location
               (randomNumber, newGenerator) = randomR (0 :: Int, ((length predators) - 1) ::Int) thisGenerator
               newCreature = setCreatureActed True creature
               newWorldState = unsafeSetCreature newCreature i j $ setGenerator newGenerator worldState
 
 chooseBehavior :: RandomGen g => Location g -> (Location g, Location g)
 chooseBehavior location@(Location Empty _ _ _) = (location, location)
-chooseBehavior location@(Location creature@(Rabbit l h Wander a) i j worldState)
-    | length predators > 0
-        = let newCreature = Rabbit l h Flee a
-              newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
-          in (newLocation, newLocation)
-    | h > 0
-        = let newCreature = Rabbit l h Graze a
-              newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
-          in (newLocation, newLocation)
+chooseBehavior location@(Location creature@(Rabbit l h Wander a) i j _)
+    | length predators > 0 = let newLocation = unsafeSetCreatureInLocation (Rabbit l h Flee a) i j location
+                             in (newLocation, newLocation)
+    | h > 0 = let newLocation = unsafeSetCreatureInLocation (Rabbit l h Graze a) i j location
+              in (newLocation, newLocation)
     | otherwise = (location, location)
         where predators = searchFor predatorSearch (getSearchDistance creature) location
-chooseBehavior location@(Location creature@(Rabbit l h Graze a) i j worldState)
-    | length predators > 0
-        = let newCreature = Rabbit l h Flee a
-              newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
-          in (newLocation, newLocation)
-    | h <= 0
-        = let newCreature = Rabbit l h Wander a
-              newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
-          in (newLocation, newLocation)
+chooseBehavior location@(Location creature@(Rabbit l h Graze a) i j _)
+    | length predators > 0 = let newLocation = unsafeSetCreatureInLocation (Rabbit l h Flee a) i j location
+                             in (newLocation, newLocation)
+    | h <= 0 = let newLocation = unsafeSetCreatureInLocation (Rabbit l h Wander a) i j location
+               in (newLocation, newLocation)
     | otherwise = (location, location)
         where predators = searchFor predatorSearch (getSearchDistance creature) location
 chooseBehavior location@(Location creature@(Rabbit l h Flee a) i j worldState)
-    | length predators == 0
-        = let newCreature = Rabbit l h Wander a
-              newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
-          in (newLocation, newLocation)
+    | length predators == 0 = let newLocation = unsafeSetCreatureInLocation (Rabbit l h Wander a) i j location
+                              in (newLocation, newLocation)
     | otherwise = (location, location)
         where predators = searchFor predatorSearch (getSearchDistance creature) location
 chooseBehavior location
