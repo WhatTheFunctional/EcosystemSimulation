@@ -116,8 +116,32 @@ chooseBehavior location@(Location creature@(Rabbit l h Wander a) i j worldState)
         = let newCreature = Rabbit l h Flee a
               newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
           in (newLocation, newLocation)
+    | h > 0
+        = let newCreature = Rabbit l h Graze a
+              newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
+          in (newLocation, newLocation)
     | otherwise = (location, location)
         where predators = searchFor predatorSearch (getSearchDistance creature) location
+chooseBehavior location@(Location creature@(Rabbit l h Graze a) i j worldState)
+    | length predators > 0
+        = let newCreature = Rabbit l h Flee a
+              newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
+          in (newLocation, newLocation)
+    | h <= 0
+        = let newCreature = Rabbit l h Wander a
+              newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
+          in (newLocation, newLocation)
+    | otherwise = (location, location)
+        where predators = searchFor predatorSearch (getSearchDistance creature) location
+chooseBehavior location@(Location creature@(Rabbit l h Flee a) i j worldState)
+    | length predators == 0
+        = let newCreature = Rabbit l h Wander a
+              newLocation = Location newCreature i j (unsafeSetCreature newCreature i j worldState)
+          in (newLocation, newLocation)
+    | otherwise = (location, location)
+        where predators = searchFor predatorSearch (getSearchDistance creature) location
+chooseBehavior location
+    = (location, location)
 
 performBehavior :: RandomGen g => (Location g) -> (Location g, Location g)
 performBehavior location@(Location Empty _ _ _) = (location, location)
@@ -135,7 +159,7 @@ creatureDeath location@(Location creature i j worldState@(WorldState {io = thisI
     = (newLocation, newLocation)
         where newCreature = lifetimeDeath $ hungerDeath creature
               newIO = thisIO >>
-                      putStr ((show i) ++ ", " ++ (show j) ++ ": ") >>
+                      putStr ((show i) ++ ", " ++ (show j) ++ " (" ++ (show creature) ++ "): ") >>
                       putStrLn ("Lifetime: " ++ (show (getLifetime creature)) ++ " Hunger: " ++ (show (getHunger creature)) ++ " State: " ++ (show (getState creature)))
               newLocation = Location newCreature i j (setIO newIO $ unsafeSetCreature newCreature i j worldState)
 
@@ -146,6 +170,7 @@ updateCreature (i, j) worldState@(WorldState {grid = thisGrid})
       not (creatureHasActed creature)
           = let (Location _ _ _ newWorldState)
                     = execState (state creatureDeath >>
+                                 state chooseBehavior >>
                                  state performBehavior) (Location (incrementHunger $ incrementLifetime creature) i j worldState)
             in newWorldState
     | otherwise = worldState

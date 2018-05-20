@@ -78,9 +78,9 @@ incrementHunger (Wolf l h s a) = Wolf l (h + 1) s a
 
 decrementHunger :: Creature -> Creature
 decrementHunger Empty = Empty
-decrementHunger (Rabbit l h s a) = Rabbit l (h + 1) s a
-decrementHunger (Fox l h s a) = Fox l (h + 1) s a
-decrementHunger (Wolf l h s a) = Wolf l (h + 1) s a
+decrementHunger (Rabbit l h s a) = Rabbit l (h - 1) s a
+decrementHunger (Fox l h s a) = Fox l (h - 1) s a
+decrementHunger (Wolf l h s a) = Wolf l (h - 1) s a
 
 getState :: Creature -> Maybe CreatureState
 getState Empty = Nothing
