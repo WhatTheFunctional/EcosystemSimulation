@@ -100,7 +100,7 @@ moveCreature (newI, newJ) location@(Location creature i j worldState@(WorldState
                                                                                   grid = thisGrid}))
     | coordinatesAreInGrid (newI, newJ) thisGrid &&
       unsafeGet newI newJ thisGrid == Empty
-        = let newGrid = unsafeSet Empty (i, j) (unsafeSet (setLifetime (thisIteration + 1) creature) (newI, newJ) thisGrid)
+        = let newGrid = unsafeSet Empty (i, j) (unsafeSet creature (newI, newJ) thisGrid)
               newLocation = Location creature newI newJ (WorldState {iteration = thisIteration,
                                                                      io = thisIO,
                                                                      generator = thisGenerator,
@@ -120,7 +120,7 @@ wander (Location creature i j worldState@(WorldState {iteration = thisIteration,
                                           io = thisIO,
                                           generator = newGenerator,
                                           grid = thisGrid}
-              newCreature = setCreatureActed True $ incrementHunger creature
+              newCreature = setCreatureActed True creature
 
 graze :: RandomGen g => Location g -> (Location g, Location g)
 graze (Location creature i j worldState@(WorldState {iteration = thisIteration,
@@ -134,7 +134,7 @@ graze (Location creature i j worldState@(WorldState {iteration = thisIteration,
                                           io = thisIO,
                                           generator = newGenerator,
                                           grid = thisGrid}
-              newCreature = setCreatureActed True $ decrementHunger creature
+              newCreature = setCreatureActed True $ decrementHunger $ decrementHunger creature
 
 hunt :: RandomGen g => Location g -> (Location g, Location g)
 hunt (Location creature i j worldState@(WorldState {iteration = thisIteration,
@@ -152,7 +152,7 @@ hunt (Location creature i j worldState@(WorldState {iteration = thisIteration,
                                           io = thisIO,
                                           generator = newGenerator,
                                           grid = thisGrid}
-              newCreature = setCreatureActed True $ incrementHunger creature
+              newCreature = setCreatureActed True creature
 
 flee :: RandomGen g => Location g -> (Location g, Location g)
 flee (Location creature i j worldState@(WorldState {iteration = thisIteration,
@@ -170,7 +170,7 @@ flee (Location creature i j worldState@(WorldState {iteration = thisIteration,
                                           io = thisIO,
                                           generator = newGenerator,
                                           grid = thisGrid}
-              newCreature = setCreatureActed True $ incrementHunger creature
+              newCreature = setCreatureActed True creature
 
 chooseBehavior :: RandomGen g => Location g -> Creature
 chooseBehavior (Location Empty _ _ _) = Empty
@@ -182,15 +182,12 @@ chooseBehavior location@(Location creature@(Rabbit l h Wander a) _ _ _)
 
 performBehavior :: RandomGen g => (Location g) -> (Location g, Location g)
 performBehavior location@(Location Empty _ _ _) = (location, location)
-performBehavior location@(Location (Rabbit _ _ _ True) _ _ _) = (location, location) --Creature has already acted this iteration
 performBehavior location@(Location (Rabbit _ _ Wander _) _ _ _) = wander location
 performBehavior location@(Location (Rabbit _ _ Graze _) _ _ _) = graze location
 performBehavior location@(Location (Rabbit _ _ Flee _) _ _ _) = flee location
-performBehavior location@(Location (Fox _ _ _ True) _ _ _) = (location, location) --Creature has already acted this iteration
 performBehavior location@(Location (Fox _ _ Wander _) _ _ _) = wander location
 performBehavior location@(Location (Fox _ _ Hunt _) _ _ _) = hunt location
 performBehavior location@(Location (Fox _ _ Flee _) _ _ _) = flee location
-performBehavior location@(Location (Wolf _ _ _ True) _ _ _) = (location, location) --Creature has already acted this iteration
 performBehavior location@(Location (Wolf _ _ Wander _) _ _ _) = wander location
 performBehavior location@(Location (Wolf _ _ Hunt _) _ _ _) = hunt location
 
@@ -202,7 +199,7 @@ creatureDeath location@(Location creature i j worldState@(WorldState {iteration 
     = let newLocation = Location newCreature i j WorldState {iteration = thisIteration,
                                                              io = thisIO >>
                                                                   putStr ((show i) ++ ", " ++ (show j) ++ ": ") >>
-                                                                  putStrLn (show (getLifetime creature)),
+                                                                  putStrLn ((show (getLifetime creature)) ++ ", " ++ (show (getHunger creature))),
                                                              generator = thisGenerator,
                                                              grid = unsafeSet newCreature (i, j) thisGrid}
       in (newLocation, newLocation)
@@ -214,10 +211,11 @@ updateCreature (i, j) worldState@(WorldState {iteration = thisIteration,
                                               generator = thisGenerator,
                                               grid = thisGrid})
     | coordinatesAreInGrid (i, j) thisGrid &&
-      creature /= Empty
+      creature /= Empty &&
+      not (creatureHasActed creature)
           = let (Location _ _ _ newWorldState)
                     = execState (state creatureDeath >>
-                                 state performBehavior) (Location creature i j worldState)
+                                 state performBehavior) (Location (incrementHunger $ incrementLifetime creature) i j worldState)
             in newWorldState
     | otherwise = worldState
         where creature = unsafeGet i j thisGrid

@@ -6,6 +6,7 @@ module Creatures (CreatureState(..),
                   getSearchDistance,
                   getLifetime,
                   setLifetime,
+                  incrementLifetime,
                   getHunger,
                   setHunger,
                   incrementHunger,
@@ -48,6 +49,12 @@ setLifetime l Empty = Empty
 setLifetime l (Rabbit x h s a) = Rabbit l h s a
 setLifetime l (Fox x h s a) = Fox l h s a
 setLifetime l (Wolf x h s a) = Wolf l h s a
+
+incrementLifetime :: Creature -> Creature
+incrementLifetime Empty = Empty
+incrementLifetime (Rabbit l h s a) = Rabbit (l + 1) h s a
+incrementLifetime (Fox l h s a) = Fox (l + 1) h s a
+incrementLifetime (Wolf l h s a) = Wolf (l + 1) h s a
 
 getHunger :: Creature -> Int
 getHunger Empty = 0
