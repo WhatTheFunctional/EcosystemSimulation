@@ -11,6 +11,7 @@ module Creatures (CreatureState(..),
                   setHunger,
                   incrementHunger,
                   decrementHunger,
+                  foodValue,
                   getState,
                   setState,
                   creatureHasActed,
@@ -23,16 +24,22 @@ import System.Random
 
 data CreatureState = Wander | Graze | Hunt | Flee deriving (Show, Eq, Ord)
 
+showSmall :: CreatureState -> String
+showSmall Wander = "W"
+showSmall Graze = "G"
+showSmall Hunt = "H"
+showSmall Flee = "F"
+
 data Creature = Empty |
                 Rabbit Int Int CreatureState Bool |
                 Fox Int Int CreatureState Bool |
                 Wolf Int Int CreatureState Bool deriving (Eq, Ord)
 
 instance Show Creature where
-    show Empty = " "
-    show (Rabbit _ _ _ _) = "R"
-    show (Fox _ _ _ _) = "F"
-    show (Wolf _ _ _ _) = "W"
+    show Empty = "  "
+    show (Rabbit _ _ s _) = "R" ++ (showSmall s)
+    show (Fox _ _ s _) = "F" ++ (showSmall s)
+    show (Wolf _ _ s _) = "W" ++ (showSmall s)
 
 getSearchDistance :: Creature -> Int
 getSearchDistance Empty = 0
@@ -81,6 +88,10 @@ decrementHunger Empty = Empty
 decrementHunger (Rabbit l h s a) = Rabbit l (h - 1) s a
 decrementHunger (Fox l h s a) = Fox l (h - 1) s a
 decrementHunger (Wolf l h s a) = Wolf l (h - 1) s a
+
+foodValue :: Creature -> Int
+foodValue (Rabbit _ _ _ _) = 10
+foodValue (Fox _ _ _ _) = 30
 
 getState :: Creature -> Maybe CreatureState
 getState Empty = Nothing
